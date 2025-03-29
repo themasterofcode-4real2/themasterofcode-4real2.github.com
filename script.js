@@ -1,53 +1,51 @@
-document.addEventListener("DOMContentLoaded", function () {
-    const likeButton = document.getElementById("like-button");
-    const likeCount = document.getElementById("like-count");
-    const commentInput = document.getElementById("comment-input");
-    const submitComment = document.getElementById("submit-comment");
-    const commentList = document.getElementById("comment-list");
-    
-    // Fetch likes and comments from server
-    async function fetchLikesAndComments() {
-        const response = await fetch("/data");
-        const data = await response.json();
-        likeCount.textContent = data.likes;
-        renderComments(data.comments);
+const express = require("express");
+const cors = require("cors");
+const fs = require("fs");
+const path = "data.json";
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// Load initial data
+let data = { likes: 0, comments: [] };
+if (fs.existsSync(path)) {
+    data = JSON.parse(fs.readFileSync(path));
+}
+
+// Save data to file
+function saveData() {
+    fs.writeFileSync(path, JSON.stringify(data));
+}
+
+// Serve likes and comments
+app.get("/data", (req, res) => {
+    res.json(data);
+});
+
+// Handle likes (one per IP)
+const likedIPs = new Set();
+app.post("/like", (req, res) => {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    if (!likedIPs.has(ip)) {
+        likedIPs.add(ip);
+        data.likes++;
+        saveData();
     }
-    
-    // Update likes on the server
-    async function likePost() {
-        const response = await fetch("/like", { method: "POST" });
-        if (response.ok) {
-            fetchLikesAndComments();
-            likeButton.disabled = true;
-        }
+    res.sendStatus(200);
+});
+
+// Handle comments
+app.post("/comment", (req, res) => {
+    const { comment } = req.body;
+    if (comment) {
+        data.comments.push(comment);
+        saveData();
     }
-    
-    // Submit a comment to the server
-    async function submitCommentHandler() {
-        const commentText = commentInput.value.trim();
-        if (commentText) {
-            await fetch("/comment", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ comment: commentText })
-            });
-            commentInput.value = "";
-            fetchLikesAndComments();
-        }
-    }
-    
-    // Render comments on the page
-    function renderComments(comments) {
-        commentList.innerHTML = "";
-        comments.forEach(comment => {
-            const commentElement = document.createElement("p");
-            commentElement.textContent = `Commenter: ${comment}`;
-            commentList.appendChild(commentElement);
-        });
-    }
-    
-    likeButton.addEventListener("click", likePost);
-    submitComment.addEventListener("click", submitCommentHandler);
-    
-    fetchLikesAndComments();
+    res.sendStatus(200);
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
