@@ -1,51 +1,26 @@
-const express = require("express");
-const cors = require("cors");
-const fs = require("fs");
-const path = "data.json";
-const app = express();
-const PORT = process.env.PORT || 3000;
+document.addEventListener("DOMContentLoaded", function () {
+    const likeButton = document.getElementById("like-button");
+    const likeCount = document.getElementById("like-count");
+    const commentInput = document.getElementById("comment-input");
+    const submitComment = document.getElementById("submit-comment");
+    const commentList = document.getElementById("comment-list");
 
-app.use(cors());
-app.use(express.json());
+    // Fetch comments and likes from data.json
+    async function fetchData() {
+        const response = await fetch("data.json");
+        const data = await response.json();
 
-// Load initial data
-let data = { likes: 0, comments: [] };
-if (fs.existsSync(path)) {
-    data = JSON.parse(fs.readFileSync(path));
-}
+        likeCount.textContent = data.likes;
 
-// Save data to file
-function saveData() {
-    fs.writeFileSync(path, JSON.stringify(data));
-}
-
-// Serve likes and comments
-app.get("/data", (req, res) => {
-    res.json(data);
-});
-
-// Handle likes (one per IP)
-const likedIPs = new Set();
-app.post("/like", (req, res) => {
-    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-    if (!likedIPs.has(ip)) {
-        likedIPs.add(ip);
-        data.likes++;
-        saveData();
+        // Render comments
+        commentList.innerHTML = "";
+        data.comments.forEach(comment => {
+            const commentElement = document.createElement("p");
+            commentElement.textContent = `Commenter: ${comment}`;
+            commentList.appendChild(commentElement);
+        });
     }
-    res.sendStatus(200);
-});
 
-// Handle comments
-app.post("/comment", (req, res) => {
-    const { comment } = req.body;
-    if (comment) {
-        data.comments.push(comment);
-        saveData();
-    }
-    res.sendStatus(200);
-});
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    // Initial load
+    fetchData();
 });
