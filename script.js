@@ -1,6 +1,4 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const likeButton = document.getElementById("like-button");
-    const likeCount = document.getElementById("like-count");
     const commentInput = document.getElementById("comment-input");
     const submitComment = document.getElementById("submit-comment");
     const commentList = document.getElementById("comment-list");
